@@ -30,6 +30,7 @@ class Model(nn.Module):
 # 실제 Target이 되는 Cosine Function.
 def cosine_function(X):
     # -0.2 ~ 0.2 사이의 랜덤값을 Noise로 줌
+    # mini-batch를 고려하여 개수를 맞춰줌
     noise = np.random.randn(X.shape[0]) * 0.2
     return np.cos(1.5 * np.pi * X) + X + noise
         
@@ -42,4 +43,34 @@ def plot_results(model):
     plt.xlim((0,5))
     plt.ylim((-1,5))
     plt.grid()
+    plt.show()
+
+def main():
+    # 0~5 사이 숫자 1만 개를 Sampling
+    data_x = np.random.rand(10000) * 5
+
+    model = Model()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    for step in range(10000):
+        # mini-batch로 32개의 데이터를 사용
+        batch_x = np.random.choice(data_x, 32)
+        batch_x_tensor = torch.from_numpy(batch_x).float().unsqueeze(1)
+        # 순전파 연산
+        pred = model.forward(batch_x_tensor)
         
+        batch_y = cosine_function(batch_x)
+        truth = torch.from_numpy(batch_y).float().unsqueeze(1)
+        # MSE 계산
+        loss = F.mse_loss(pred, truth)
+
+        # 누적 Gradient 초기화, AutoGrad 기능의 Cash영역을 날리는 걸까?
+        optimizer.zero_grad()
+        # Tensor.backward(), Back propagation을 통한 Gradient 계산
+        loss.mean().backward()
+        # Gradient를 이용해 실제로 Parameter를 업데이트함
+        optimizer.step()
+
+    plot_results(model)
+
+main()
